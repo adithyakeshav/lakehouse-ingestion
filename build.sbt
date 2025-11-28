@@ -30,3 +30,17 @@ lazy val root = (project in file("."))
 artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
   artifact.name + "." + artifact.extension
 }
+
+// Minimal assembly merge strategy (Spark provided at runtime via image)
+assembly / assemblyMergeStrategy := {
+  case PathList("META-INF", "services", xs @ _*) => MergeStrategy.concat
+  case PathList("META-INF", "versions", xs @ _*) => MergeStrategy.first
+  case PathList("META-INF", "io.netty.versions.properties") => MergeStrategy.first
+  case PathList("META-INF", "org", "apache", "logging", "log4j", "core", "config", "plugins", "Log4j2Plugins.dat") => MergeStrategy.first
+  case "reference.conf" => MergeStrategy.concat
+  case "module-info.class" => MergeStrategy.discard
+  case PathList("mozilla", "public-suffix-list.txt") => MergeStrategy.first
+  case x =>
+    val old = (assembly / assemblyMergeStrategy).value
+    old(x)
+}
