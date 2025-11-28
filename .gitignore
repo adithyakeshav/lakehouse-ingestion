@@ -1,0 +1,43 @@
+# SBT / build artifacts
+target/
+project/target/
+project/project/
+dist/
+
+# IntelliJ / Metals / Bloop
+.idea/
+.bloop/
+.metals/
+.vscode/
+.classpath
+.project
+.settings/
+
+# Logs and temp files
+logs/
+*.log
+*.tmp
+*.swp
+*.swo
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+# Python / virtualenvs (in case you add helper scripts)
+.venv/
+venv/
+__pycache__/
+
+# Spark checkpoints / outputs (paths should be configured outside repo,
+# but this is a safeguard for accidental local runs)
+checkpoint/
+checkpoints/
+spark-warehouse/
+
+# Local configs / secrets
+*.local.conf
+*.secrets.conf
+.env
+
+.bsp/
