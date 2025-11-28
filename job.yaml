@@ -21,6 +21,11 @@ spec:
     spark.sql.catalogImplementation: "hive"
     hive.metastore.uris: "thrift://hive-metastore.hive-metastore.svc.cluster.local:9083"
     spark.sql.warehouse.dir: "s3a://learn-spark/warehouse"
+    # MinIO / S3A configuration (update endpoint and bucket/creds as needed)
+    spark.hadoop.fs.s3a.impl: "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    spark.hadoop.fs.s3a.endpoint: "http://minio.minio.svc.cluster.local:9000"
+    spark.hadoop.fs.s3a.path.style.access: "true"
+    spark.hadoop.fs.s3a.connection.ssl.enabled: "false"
   sparkVersion: 3.4.1
   driver:
     envFrom:

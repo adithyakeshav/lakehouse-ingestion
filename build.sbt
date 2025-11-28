@@ -27,9 +27,7 @@ lazy val root = (project in file("."))
     )
   )
 
-artifactName := { (sv: ScalaVersion, module: ModuleID, artifact: Artifact) =>
-  artifact.name + "." + artifact.extension
-}
+assembly / assemblyJarName := "lakehouse-ingestion.jar"
 
 // Minimal assembly merge strategy (Spark provided at runtime via image)
 assembly / assemblyMergeStrategy := {
