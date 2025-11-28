@@ -1,7 +1,8 @@
 package com.lakehouse.ingestion.io
 
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, DataFrameReader, SparkSession}
 import org.apache.spark.sql.functions.{col, from_json}
+import org.apache.spark.sql.streaming.DataStreamReader
 import org.apache.spark.sql.types.StructType
 import org.slf4j.LoggerFactory
 
@@ -36,9 +37,7 @@ final class KafkaReader extends BaseReader {
         s"with options=${kafkaOptions}"
     )
 
-    val reader =
-      if (isStreaming) spark.readStream.format("kafka").options(kafkaOptions)
-      else spark.read.format("kafka").options(kafkaOptions)
+    val reader: DataStreamReader = spark.readStream.format("kafka").options(kafkaOptions)
 
     val kafkaDf = reader.load()
 

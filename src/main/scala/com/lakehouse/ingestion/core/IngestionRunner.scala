@@ -19,19 +19,19 @@ import org.slf4j.LoggerFactory
  */
 object IngestionRunner {
 
-  private val log = LoggerFactory.getLogger(classOf[IngestionRunner.type])
+  private val logger = LoggerFactory.getLogger(IngestionRunner.getClass)
 
   def main(args: Array[String]): Unit = {
     val configPath = parseArgs(args).getOrElse {
       val msg = "Missing --config /path/to/pipeline.conf"
-      log.error(msg)
+      logger.error(msg)
       throw new IllegalArgumentException(msg)
     }
 
-    log.error(s"[IngestionRunner] Using config path: $configPath")
+    logger.error(s"[IngestionRunner] Using config path: $configPath")
 
     val pipelineConfig = loadPipelineConfig(configPath)
-    log.error(
+    logger.error(
       s"[IngestionRunner] Loaded pipeline config env='${pipelineConfig.env}', jobs=${pipelineConfig.jobs.size}"
     )
 
@@ -45,7 +45,7 @@ object IngestionRunner {
       val catalogAdapter = buildCatalogAdapter(spark, pipelineConfig)
 
       pipelineConfig.jobs.foreach { jobCfg =>
-        log.error(
+        logger.error(
           s"[IngestionRunner] Starting job domain='${jobCfg.domain}', dataset='${jobCfg.dataset}', layer='${jobCfg.target.layer}'"
         )
         val reader = buildReader(jobCfg)
@@ -63,12 +63,12 @@ object IngestionRunner {
         )
 
         job.run()
-        log.error(
+        logger.error(
           s"[IngestionRunner] Completed job domain='${jobCfg.domain}', dataset='${jobCfg.dataset}', layer='${jobCfg.target.layer}'"
         )
       }
     } finally {
-      log.error("[IngestionRunner] Stopping SparkSession")
+      logger.error("[IngestionRunner] Stopping SparkSession")
       spark.stop()
     }
   }
