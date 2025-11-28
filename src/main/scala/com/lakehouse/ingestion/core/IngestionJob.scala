@@ -7,6 +7,7 @@ import com.lakehouse.ingestion.io.{BaseReader, BaseWriter}
 import com.lakehouse.ingestion.lakehouse.LakehouseTable
 import com.lakehouse.ingestion.schema.SchemaRegistry
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 
 /**
  * Orchestrates a single config-driven ingestion job:
@@ -25,6 +26,8 @@ final class IngestionJob(
     catalog: CatalogAdapter
 ) {
 
+  private val log = LoggerFactory.getLogger(classOf[IngestionJob])
+
   def run(): Unit = {
     // 1. Resolve schema
     val schema = schemaRegistry.getSchema(
@@ -40,17 +43,25 @@ final class IngestionJob(
       schema = Some(schema)
     )
 
+    val isStreaming = df.isStreaming
+    log.error(
+      s"[IngestionJob] Starting ingestion for ${config.domain}.${config.dataset}, " +
+        s"layer=${config.target.layer}, streaming=$isStreaming"
+    )
+
     // 3. Data Quality (optional)
     dqRuleSetOpt.foreach { ruleset =>
       val summary = ruleset(df)
       config.dataQuality.foreach { dqCfg =>
         dqCfg.onFail.toUpperCase match {
           case "FAIL_FAST" if summary.status == DQStatus.FAIL =>
-            throw new RuntimeException(s"DQ failed for ${config.domain}.${config.dataset}: $summary")
+            val msg = s"DQ failed for ${config.domain}.${config.dataset}: $summary"
+            log.error(msg)
+            throw new RuntimeException(msg)
           case _ =>
             // For QUARANTINE / LOG_ONLY, we just log for now. Actual quarantine
             // behavior can be implemented in later phases.
-            println(s"[DQ] Summary for ${config.domain}.${config.dataset}: $summary")
+            log.error(s"[DQ] Summary for ${config.domain}.${config.dataset}: $summary")
         }
       }
     }
@@ -62,9 +73,26 @@ final class IngestionJob(
       partitions = config.target.partitions
     )
 
-    // In Phase 1, we assume writer is already a suitable LakehouseWriter or
-    // other sink-aware implementation.
-    writer.write(df, Map("table" -> table.identifier))
+    val baseOptions = Map("table" -> table.identifier)
+    val writeOptions =
+      if (isStreaming)
+        baseOptions + ("checkpointLocation" ->
+          s"/tmp/checkpoints/${config.domain}/${config.dataset}/${config.target.layer}")
+      else baseOptions
+
+    log.error(
+      s"[IngestionJob] Writing to table='${table.identifier}', " +
+        s"checkpoint='${writeOptions.getOrElse("checkpointLocation", "n/a")}', streaming=$isStreaming"
+    )
+
+    // Writer implementation is responsible for choosing batch vs streaming
+    // semantics based on df.isStreaming and the provided options.
+    writer.write(df, writeOptions)
+
+    log.error(
+      s"[IngestionJob] Finished ingestion for ${config.domain}.${config.dataset}, " +
+        s"layer=${config.target.layer}, streaming=$isStreaming"
+    )
   }
 }
 

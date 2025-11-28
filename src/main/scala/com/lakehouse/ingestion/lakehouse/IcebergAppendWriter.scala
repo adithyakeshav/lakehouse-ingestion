@@ -2,6 +2,7 @@ package com.lakehouse.ingestion.lakehouse
 
 import com.lakehouse.ingestion.io.BaseWriter
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.slf4j.LoggerFactory
 
 /**
  * Simple append-only writer for Iceberg tables.
@@ -16,17 +17,44 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
  */
 final class IcebergAppendWriter(spark: SparkSession) extends BaseWriter {
 
+  private val log = LoggerFactory.getLogger(classOf[IcebergAppendWriter])
+
   override def write(
       df: DataFrame,
       options: Map[String, String]
   ): Unit = {
     val table = options.getOrElse(
       "table",
-      throw new IllegalArgumentException("IcebergAppendWriter requires 'table' option.")
+      {
+        val msg = "IcebergAppendWriter requires 'table' option."
+        log.error(msg)
+        throw new IllegalArgumentException(msg)
+      }
     )
 
-    // Use Spark's DataFrameWriterV2 for Iceberg append semantics.
-    df.writeTo(table).append()
+    if (df.isStreaming) {
+      val checkpointLocation = options.getOrElse(
+        "checkpointLocation",
+        s"/tmp/checkpoints/$table"
+      )
+
+      log.error(
+        s"[IcebergAppendWriter] Starting streaming write to table='$table' " +
+          s"with checkpointLocation='$checkpointLocation'"
+      )
+
+      // Structured Streaming to Iceberg table; this will block until termination.
+      val query = df.writeStream
+        .option("checkpointLocation", checkpointLocation)
+        .toTable(table)
+
+      query.awaitTermination()
+      log.error(s"[IcebergAppendWriter] Streaming query for table='$table' terminated")
+    } else {
+      // Batch append using DataFrameWriterV2 semantics.
+      log.error(s"[IcebergAppendWriter] Batch append to table='$table'")
+      df.writeTo(table).append()
+    }
   }
 }
 

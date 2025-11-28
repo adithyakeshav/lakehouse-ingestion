@@ -6,6 +6,7 @@ import com.lakehouse.ingestion.io.{BaseReader, BaseWriter, KafkaReader, S3Parque
 import com.lakehouse.ingestion.lakehouse.IcebergAppendWriter
 import com.lakehouse.ingestion.schema.{FileBasedSchemaRegistry, SchemaRegistry}
 import org.apache.spark.sql.SparkSession
+import org.slf4j.LoggerFactory
 
 /**
  * Entry point for running config-driven ingestion jobs.
@@ -18,12 +19,21 @@ import org.apache.spark.sql.SparkSession
  */
 object IngestionRunner {
 
+  private val log = LoggerFactory.getLogger(classOf[IngestionRunner.type])
+
   def main(args: Array[String]): Unit = {
     val configPath = parseArgs(args).getOrElse {
-      throw new IllegalArgumentException("Missing --config /path/to/pipeline.yaml")
+      val msg = "Missing --config /path/to/pipeline.conf"
+      log.error(msg)
+      throw new IllegalArgumentException(msg)
     }
 
+    log.error(s"[IngestionRunner] Using config path: $configPath")
+
     val pipelineConfig = loadPipelineConfig(configPath)
+    log.error(
+      s"[IngestionRunner] Loaded pipeline config env='${pipelineConfig.env}', jobs=${pipelineConfig.jobs.size}"
+    )
 
     val spark = SparkSession
       .builder()
@@ -35,6 +45,9 @@ object IngestionRunner {
       val catalogAdapter = buildCatalogAdapter(spark, pipelineConfig)
 
       pipelineConfig.jobs.foreach { jobCfg =>
+        log.error(
+          s"[IngestionRunner] Starting job domain='${jobCfg.domain}', dataset='${jobCfg.dataset}', layer='${jobCfg.target.layer}'"
+        )
         val reader = buildReader(jobCfg)
         val writer = buildWriter(jobCfg, spark, catalogAdapter)
         val dq     = buildDQRuleSet(jobCfg)
@@ -50,8 +63,12 @@ object IngestionRunner {
         )
 
         job.run()
+        log.error(
+          s"[IngestionRunner] Completed job domain='${jobCfg.domain}', dataset='${jobCfg.dataset}', layer='${jobCfg.target.layer}'"
+        )
       }
     } finally {
+      log.error("[IngestionRunner] Stopping SparkSession")
       spark.stop()
     }
   }

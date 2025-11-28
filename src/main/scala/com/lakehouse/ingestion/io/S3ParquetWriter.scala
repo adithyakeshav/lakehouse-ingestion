@@ -1,6 +1,7 @@
 package com.lakehouse.ingestion.io
 
 import org.apache.spark.sql.{DataFrame, SaveMode}
+import org.slf4j.LoggerFactory
 
 /**
  * Simple writer that writes DataFrames as Parquet files to S3 (or any
@@ -13,6 +14,8 @@ import org.apache.spark.sql.{DataFrame, SaveMode}
  */
 final class S3ParquetWriter extends BaseWriter {
 
+  private val log = LoggerFactory.getLogger(classOf[S3ParquetWriter])
+
   override def write(
       df: DataFrame,
       options: Map[String, String]
@@ -20,10 +23,16 @@ final class S3ParquetWriter extends BaseWriter {
     val path = options
       .get("path")
       .orElse(options.get("table"))
-      .getOrElse(throw new IllegalArgumentException("S3ParquetWriter requires 'path' or 'table' option."))
+      .getOrElse {
+        val msg = "S3ParquetWriter requires 'path' or 'table' option."
+        log.error(msg)
+        throw new IllegalArgumentException(msg)
+      }
 
     val modeName = options.getOrElse("mode", SaveMode.Append.name())
     val mode     = SaveMode.valueOf(modeName)
+
+    log.error(s"[S3ParquetWriter] Writing DataFrame to '$path' with mode='$modeName'")
 
     df.write
       .mode(mode)
