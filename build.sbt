@@ -8,9 +8,22 @@ lazy val root = (project in file("."))
   .settings(
     name := "lakehouse-ingestion",
 
-    // Include schemas directory in JAR resources
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "schemas",
-    Compile / unmanagedResourceDirectories += baseDirectory.value / "configs",
+    // Copy schemas/ and configs/ into JAR preserving directory prefix
+    Compile / resourceGenerators += Def.task {
+      val managedDir = (Compile / resourceManaged).value
+      val base = baseDirectory.value
+      Seq("schemas", "configs").flatMap { dir =>
+        val srcDir = base / dir
+        if (srcDir.exists) {
+          (srcDir ** "*").get.filter(_.isFile).map { f =>
+            val relative = base.toPath.relativize(f.toPath).toString
+            val target = managedDir / relative
+            IO.copyFile(f, target)
+            target
+          }
+        } else Nil
+      }
+    }.taskValue,
 
     libraryDependencies ++= Seq(
       "org.apache.spark" %% "spark-core"                 % sparkVersion % "provided",
@@ -19,7 +32,7 @@ lazy val root = (project in file("."))
       "org.apache.spark" %% "spark-streaming-kafka-0-10" % sparkVersion % "provided",
       // Needed for DataFrame-based Kafka source in KafkaReader
       "org.apache.spark" %% "spark-sql-kafka-0-10"       % sparkVersion % "provided",
-      // Runtime deps: downloaded via spark.jars.packages (not bundled in fat JAR)
+      // Runtime deps: baked into Docker image, not bundled in fat JAR
       "org.apache.hadoop" %  "hadoop-aws"                % "3.3.2"  % "provided",
       "com.amazonaws"      % "aws-java-sdk-bundle"       % "1.12.262" % "provided",
       "io.delta"         %% "delta-core"                 % "2.4.0"  % "provided",
