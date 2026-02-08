@@ -10,17 +10,11 @@ on:
       - 'project/**'
       - 'schemas/**'
       - 'configs/**'
-      - '.github/workflows/**'
-  workflow_dispatch:  # Allow manual trigger
-
-env:
-  MINIO_ENDPOINT: ${{ secrets.MINIO_ENDPOINT }}
-  MINIO_ACCESS_KEY: ${{ secrets.MINIO_ACCESS_KEY }}
-  MINIO_SECRET_KEY: ${{ secrets.MINIO_SECRET_KEY }}
-  MINIO_BUCKET: spark-jars
+      - '.github/workflows/build-and-upload.yaml'
+  workflow_dispatch:
 
 jobs:
-  build-and-upload:
+  build-jar:
     runs-on: ubuntu-latest
     environment: PROD
     permissions:
@@ -42,14 +36,13 @@ jobs:
       - name: Build JAR
         run: sbt clean assembly
 
-      - name: Verify JAR exists
+      - name: Verify JAR
         run: |
           if [ ! -f target/scala-2.12/lakehouse-ingestion.jar ]; then
-            echo "❌ JAR build failed!"
+            echo "JAR build failed!"
             exit 1
           fi
           ls -lh target/scala-2.12/lakehouse-ingestion.jar
-          echo "✅ JAR built successfully"
 
       - name: Setup Tailscale
         uses: tailscale/github-action@v2
@@ -66,36 +59,11 @@ jobs:
 
       - name: Configure MinIO Client
         run: |
-          mc alias set minio ${{ env.MINIO_ENDPOINT }} ${{ env.MINIO_ACCESS_KEY }} ${{ env.MINIO_SECRET_KEY }}
-
-      - name: Create bucket if not exists
-        run: |
-          mc mb --ignore-existing minio/${{ env.MINIO_BUCKET }}
-
-      - name: Test MinIO connectivity
-        run: |
-          echo "JAR size:"
-          ls -lh target/scala-2.12/lakehouse-ingestion.jar
-          echo "Testing MinIO connectivity..."
-          mc ping minio --count 3 || echo "Ping not supported, trying ls..."
-          mc ls minio/ || echo "❌ Cannot list MinIO buckets"
+          mc alias set minio ${{ secrets.MINIO_ENDPOINT }} ${{ secrets.MINIO_ACCESS_KEY }} ${{ secrets.MINIO_SECRET_KEY }}
 
       - name: Upload JAR to MinIO
-        timeout-minutes: 10
+        timeout-minutes: 5
         run: |
-          mc cp --no-color target/scala-2.12/lakehouse-ingestion.jar minio/${{ env.MINIO_BUCKET }}/lakehouse-ingestion.jar
-          echo "✅ JAR uploaded to s3://spark-jars/lakehouse-ingestion.jar"
-
-      - name: List uploaded JARs
-        run: |
-          echo "📦 JARs in MinIO bucket:"
-          mc ls minio/${{ env.MINIO_BUCKET }}/
-
-      - name: Summary
-        if: github.event_name == 'push'
-        run: |
-          echo "✅ Build and upload complete!"
-          echo ""
-          echo "Next steps:"
-          echo "  - ArgoCD will auto-sync lakehouse-ingestion-prod"
-          echo "  - For dev, run: argocd app sync lakehouse-ingestion-dev"
+          mc cp --no-color target/scala-2.12/lakehouse-ingestion.jar minio/spark-jars/lakehouse-ingestion.jar
+          echo "JAR uploaded to s3://spark-jars/lakehouse-ingestion.jar"
+          mc ls minio/spark-jars/
