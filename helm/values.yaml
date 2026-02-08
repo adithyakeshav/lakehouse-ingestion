@@ -118,6 +118,10 @@ monitoring:
   exposeDriverMetrics: true
   exposeExecutorMetrics: true
 
+  # ServiceMonitor (requires Prometheus Operator CRD)
+  serviceMonitor:
+    enabled: false
+
   # Prometheus JMX exporter
   jmxExporter:
     enabled: true
