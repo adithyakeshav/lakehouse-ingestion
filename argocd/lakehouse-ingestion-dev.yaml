@@ -1,0 +1,55 @@
+---
+# Lakehouse Ingestion (Dev) - CDC pipeline for medallion architecture
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: lakehouse-ingestion-dev
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"  # After Kafka, Hive, MinIO
+spec:
+  project: default
+
+  source:
+    repoURL: git@github.com:adithyakeshav/lakehouse-ingestion.git
+    targetRevision: main
+    path: helm
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-dev.yaml
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: lakehouse-dev
+
+  syncPolicy:
+    # Manual sync for dev - on-demand testing
+    syncOptions:
+      - CreateNamespace=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+
+  # Ignore SparkApplication status changes
+  ignoreDifferences:
+    - group: sparkoperator.k8s.io
+      kind: SparkApplication
+      jsonPointers:
+        - /status
+    - group: ""
+      kind: Secret
+      jsonPointers:
+        - /data
+    - group: external-secrets.io
+      kind: ExternalSecret
+      jsonPointers:
+        - /spec/data/0/remoteRef/conversionStrategy
+        - /spec/data/0/remoteRef/decodingStrategy
+        - /spec/data/0/remoteRef/metadataPolicy
+        - /spec/target/deletionPolicy

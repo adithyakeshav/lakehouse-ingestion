@@ -1,0 +1,94 @@
+apiVersion: sparkoperator.k8s.io/v1beta2
+kind: SparkApplication
+metadata:
+  name: {{ include "lakehouse-ingestion.fullname" . }}
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "lakehouse-ingestion.labels" . | nindent 4 }}
+spec:
+  type: Scala
+  mode: cluster
+  image: {{ .Values.image.repository }}:{{ .Values.image.tag }}
+  imagePullPolicy: {{ .Values.image.pullPolicy }}
+  mainClass: {{ .Values.spark.mainClass }}
+  mainApplicationFile: {{ .Values.spark.mainApplicationFile }}
+
+  # Arguments passed to main class
+  arguments:
+    - "--config"
+    - {{ .Values.spark.configFile }}
+
+  # Spark configuration
+  sparkConf:
+    {{- range $key, $value := .Values.spark.sparkConf }}
+    {{ $key }}: {{ $value | quote }}
+    {{- end }}
+
+  sparkVersion: {{ .Values.spark.version | quote }}
+
+  # Driver configuration
+  driver:
+    envFrom:
+      {{- if .Values.externalSecrets.enabled }}
+      - secretRef:
+          name: {{ include "lakehouse-ingestion.fullname" . }}-minio-secrets
+      {{- end }}
+    labels:
+      {{- toYaml .Values.driver.labels | nindent 6 }}
+    cores: {{ .Values.driver.cores }}
+    memory: {{ .Values.driver.memory | quote }}
+    serviceAccount: {{ .Values.driver.serviceAccount }}
+
+  # Executor configuration
+  executor:
+    envFrom:
+      {{- if .Values.externalSecrets.enabled }}
+      - secretRef:
+          name: {{ include "lakehouse-ingestion.fullname" . }}-minio-secrets
+      {{- end }}
+    labels:
+      {{- toYaml .Values.executor.labels | nindent 6 }}
+    instances: {{ .Values.executor.instances }}
+    cores: {{ .Values.executor.cores }}
+    memory: {{ .Values.executor.memory | quote }}
+    {{- with .Values.executor.securityContext }}
+    securityContext:
+      {{- toYaml . | nindent 6 }}
+    {{- end }}
+
+  # Monitoring configuration
+  {{- if .Values.monitoring.enabled }}
+  monitoring:
+    exposeDriverMetrics: {{ .Values.monitoring.exposeDriverMetrics }}
+    exposeExecutorMetrics: {{ .Values.monitoring.exposeExecutorMetrics }}
+    {{- if .Values.monitoring.jmxExporter.enabled }}
+    prometheus:
+      jmxExporterJar: {{ .Values.monitoring.jmxExporter.jar }}
+      port: {{ .Values.monitoring.jmxExporter.port }}
+    {{- end }}
+  {{- end }}
+
+  # Restart policy
+  restartPolicy:
+    type: {{ .Values.restartPolicy.type }}
+    {{- if eq .Values.restartPolicy.type "OnFailure" }}
+    onFailureRetries: {{ .Values.restartPolicy.onFailureRetries }}
+    onFailureRetryInterval: {{ .Values.restartPolicy.onFailureRetryInterval }}
+    {{- end }}
+    onSubmissionFailureRetries: {{ .Values.restartPolicy.onSubmissionFailureRetries }}
+    onSubmissionFailureRetryInterval: {{ .Values.restartPolicy.onSubmissionFailureRetryInterval }}
+
+  {{- with .Values.nodeSelector }}
+  nodeSelector:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- with .Values.affinity }}
+  affinity:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+
+  {{- with .Values.tolerations }}
+  tolerations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}

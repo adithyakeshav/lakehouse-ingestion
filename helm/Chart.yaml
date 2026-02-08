@@ -1,0 +1,20 @@
+apiVersion: v2
+name: lakehouse-ingestion
+description: CDC ingestion pipeline for medallion architecture lakehouse
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+
+keywords:
+  - spark
+  - delta-lake
+  - cdc
+  - lakehouse
+  - medallion
+
+maintainers:
+  - name: Data Platform Team
+    email: data-platform@company.com
+
+sources:
+  - https://github.com/your-org/lakehouse-ingestion

@@ -1,0 +1,25 @@
+{{- if .Values.ingress.enabled }}
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: {{ include "lakehouse-ingestion.fullname" . }}-ui
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "lakehouse-ingestion.labels" . | nindent 4 }}
+spec:
+  ingressClassName: {{ .Values.ingress.className }}
+  rules:
+    - host: {{ .Values.ingress.hostname }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: {{ include "lakehouse-ingestion.fullname" . }}-ui-svc
+                port:
+                  number: {{ .Values.ingress.port }}
+  tls:
+    - hosts:
+        - {{ .Values.ingress.hostname }}
+{{- end }}

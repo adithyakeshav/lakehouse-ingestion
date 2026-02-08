@@ -1,0 +1,57 @@
+{{- if .Values.config.create }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "lakehouse-ingestion.fullname" . }}-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "lakehouse-ingestion.labels" . | nindent 4 }}
+data:
+  cdc-postgres-to-delta.conf: |
+{{- if .Values.config.content }}
+{{ .Values.config.content | nindent 4 }}
+{{- else }}
+    # CDC Ingestion: PostgreSQL → Delta Lake (Bronze Layer)
+    env = "{{ .Values.environment }}"
+
+    jobs = [
+      {
+        domain = "music_school"
+        dataset = "cdc"
+
+        source = {
+          type = "kafka"
+          options = {
+            bootstrap.servers = "datalake-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            subscribe = "postgres_cdc_music_school_db"
+            streaming = "true"
+            startingOffsets = "latest"
+            group.id = "lakehouse-ingestion-cdc-music-school"
+            kafka.security.protocol = "PLAINTEXT"
+            failOnDataLoss = "false"
+            maxOffsetsPerTrigger = "10000"
+            minPartitions = "2"
+          }
+        }
+
+        target = {
+          table = "s3a://lakehouse/bronze/music_school/cdc/"
+          lakehouse_format = "delta"
+          catalog = "hive"
+          layer = "bronze"
+          partitions = []
+        }
+
+        schema = {
+          registry_domain = "music_school"
+          registry_dataset = "cdc"
+          version = "v1"
+        }
+
+        data_quality = {
+          on_fail = "LOG_ONLY"
+        }
+      }
+    ]
+{{- end }}
+{{- end }}

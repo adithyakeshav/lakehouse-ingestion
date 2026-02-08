@@ -1,0 +1,87 @@
+# Development environment overrides
+# These values override helm/values.yaml for dev environment
+
+environment: dev
+
+# Spark configuration - dev settings
+spark:
+  # Use local JAR for faster dev iteration
+  mainApplicationFile: "local:///app/lakehouse-ingestion.jar"
+
+  sparkConf:
+    # More verbose logging for dev
+    "spark.log.level": "INFO"
+
+    # Kafka - use latest offset for dev (don't replay old data)
+    "spark.kafka.startingOffsets": "latest"
+
+# Resource limits - smaller for dev
+driver:
+  cores: 1
+  memory: "1g"
+
+executor:
+  instances: 1
+  cores: 1
+  memory: "1g"
+
+# Monitoring - less aggressive in dev
+monitoring:
+  enabled: true
+  jmxExporter:
+    enabled: false  # Disable JMX in dev to save resources
+
+# Restart policy - more retries in dev for experimentation
+restartPolicy:
+  type: OnFailure
+  onFailureRetries: 5
+  onFailureRetryInterval: 20
+  onSubmissionFailureRetries: 10
+  onSubmissionFailureRetryInterval: 30
+
+# ConfigMap - dev-specific config
+config:
+  create: true
+  # Use inline config for dev (easier to iterate)
+  content: |
+    env = "dev"
+
+    jobs = [
+      {
+        domain = "music_school"
+        dataset = "cdc"
+
+        source = {
+          type = "kafka"
+          options = {
+            bootstrap.servers = "datalake-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            subscribe = "postgres_cdc_music_school_db"
+            streaming = "true"
+            startingOffsets = "earliest"  # Replay all data in dev
+            group.id = "lakehouse-ingestion-cdc-music-school-dev"
+            kafka.security.protocol = "PLAINTEXT"
+            failOnDataLoss = "false"
+            maxOffsetsPerTrigger = "1000"  # Smaller batches for dev
+            minPartitions = "1"
+          }
+        }
+
+        target = {
+          table = "s3a://lakehouse/bronze/music_school/cdc/dev/"
+          lakehouse_format = "delta"
+          catalog = "hive"
+          layer = "bronze"
+          partitions = []
+        }
+
+        schema = {
+          registry_domain = "music_school"
+          registry_dataset = "cdc"
+          version = "v1"
+        }
+
+        data_quality = {
+          on_fail = "LOG_ONLY"
+        }
+      }
+    ]

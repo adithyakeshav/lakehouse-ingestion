@@ -1,0 +1,88 @@
+# Production environment overrides
+# These values override helm/values.yaml for production
+
+environment: prod
+
+# Spark configuration - prod settings
+spark:
+  # JAR from MinIO for prod
+  mainApplicationFile: "s3a://spark-jobs/jars/lakehouse-ingestion.jar"
+
+  sparkConf:
+    # Less verbose logging for prod
+    "spark.log.level": "WARN"
+
+    # Kafka - use latest offset (don't replay on every deploy)
+    "spark.kafka.startingOffsets": "latest"
+
+# Resource limits - production scale
+driver:
+  cores: 2
+  memory: "4g"
+
+executor:
+  instances: 3
+  cores: 2
+  memory: "4g"
+
+# Monitoring - full monitoring in prod
+monitoring:
+  enabled: true
+  exposeDriverMetrics: true
+  exposeExecutorMetrics: true
+  jmxExporter:
+    enabled: true
+
+# Restart policy - conservative retries in prod
+restartPolicy:
+  type: OnFailure
+  onFailureRetries: 3
+  onFailureRetryInterval: 10
+  onSubmissionFailureRetries: 5
+  onSubmissionFailureRetryInterval: 20
+
+# ConfigMap - prod-specific config
+config:
+  create: true
+  content: |
+    env = "prod"
+
+    jobs = [
+      {
+        domain = "music_school"
+        dataset = "cdc"
+
+        source = {
+          type = "kafka"
+          options = {
+            bootstrap.servers = "datalake-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            subscribe = "postgres_cdc_music_school_db"
+            streaming = "true"
+            startingOffsets = "latest"  # Only process new data in prod
+            group.id = "lakehouse-ingestion-cdc-music-school-prod"
+            kafka.security.protocol = "PLAINTEXT"
+            failOnDataLoss = "true"  # Strict in prod
+            maxOffsetsPerTrigger = "50000"  # Larger batches for prod
+            minPartitions = "3"
+          }
+        }
+
+        target = {
+          table = "s3a://lakehouse/bronze/music_school/cdc/"
+          lakehouse_format = "delta"
+          catalog = "hive"
+          layer = "bronze"
+          partitions = []
+        }
+
+        schema = {
+          registry_domain = "music_school"
+          registry_dataset = "cdc"
+          version = "v1"
+        }
+
+        data_quality = {
+          on_fail = "LOG_ONLY"  # Even in prod, preserve all CDC events
+        }
+      }
+    ]
