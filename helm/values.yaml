@@ -39,6 +39,12 @@ spark:
     "spark.hive.metastore.uris": "thrift://hive-metastore.hive-metastore.svc.cluster.local:9083"
     "spark.sql.warehouse.dir": "s3a://learn-spark/warehouse"
 
+    # Iceberg catalog
+    "spark.sql.catalog.iceberg": "org.apache.iceberg.spark.SparkCatalog"
+    "spark.sql.catalog.iceberg.type": "hive"
+    "spark.sql.catalog.iceberg.uri": "thrift://hive-metastore.hive-metastore.svc.cluster.local:9083"
+    "spark.sql.catalog.iceberg.warehouse": "s3a://learn-spark/warehouse"
+
     # MinIO / S3A configuration
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
     "spark.hadoop.fs.s3a.endpoint": "http://minio.minio.svc.cluster.local:9000"
