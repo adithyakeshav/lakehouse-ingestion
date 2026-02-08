@@ -10,6 +10,7 @@ on:
       - 'project/**'
       - 'schemas/**'
       - 'configs/**'
+      - '.github/workflows/**'
   workflow_dispatch:  # Allow manual trigger
 
 env:
