@@ -72,9 +72,18 @@ jobs:
         run: |
           mc mb --ignore-existing minio/${{ env.MINIO_BUCKET }}
 
-      - name: Upload JAR to MinIO
+      - name: Test MinIO connectivity
         run: |
-          mc cp target/scala-2.12/lakehouse-ingestion.jar minio/${{ env.MINIO_BUCKET }}/lakehouse-ingestion.jar
+          echo "JAR size:"
+          ls -lh target/scala-2.12/lakehouse-ingestion.jar
+          echo "Testing MinIO connectivity..."
+          mc ping minio --count 3 || echo "Ping not supported, trying ls..."
+          mc ls minio/ || echo "❌ Cannot list MinIO buckets"
+
+      - name: Upload JAR to MinIO
+        timeout-minutes: 10
+        run: |
+          mc cp --no-color target/scala-2.12/lakehouse-ingestion.jar minio/${{ env.MINIO_BUCKET }}/lakehouse-ingestion.jar
           echo "✅ JAR uploaded to s3://spark-jars/lakehouse-ingestion.jar"
 
       - name: List uploaded JARs
