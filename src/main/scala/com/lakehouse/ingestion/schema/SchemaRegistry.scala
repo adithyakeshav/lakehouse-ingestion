@@ -121,7 +121,7 @@ final class FileBasedSchemaRegistry(basePath: String = "schemas") extends Schema
     (1 to 10).map(v => s"v$v")
       .filter { version =>
         val resourcePath = s"$basePath/$domain/$dataset/$version.json"
-        getClass.getClassLoader.getResource(resourcePath) != null
+        Thread.currentThread().getContextClassLoader.getResource(resourcePath) != null
       }
   }
 
@@ -218,7 +218,7 @@ final class FileBasedSchemaRegistry(basePath: String = "schemas") extends Schema
 
     log.info(s"Loading schema from classpath: $resourcePath")
 
-    val inputStream = getClass.getClassLoader.getResourceAsStream(resourcePath)
+    val inputStream = Thread.currentThread().getContextClassLoader.getResourceAsStream(resourcePath)
 
     if (inputStream == null) {
       throw new SchemaNotFoundException(
