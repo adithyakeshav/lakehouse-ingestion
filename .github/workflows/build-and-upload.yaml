@@ -2,8 +2,6 @@ name: Build and Upload JAR
 
 on:
   push:
-    branches:
-      - main
     paths:
       - 'src/**'
       - 'build.sbt'
