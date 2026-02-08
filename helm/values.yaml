@@ -1,0 +1,179 @@
+# Default values for lakehouse-ingestion
+# This is a YAML-formatted file.
+
+# Global settings
+nameOverride: ""
+fullnameOverride: ""
+
+# Environment (dev/staging/prod)
+environment: dev
+
+# Spark Application Configuration
+spark:
+  # Spark version
+  version: "3.4.1"
+
+  # Main class to run
+  mainClass: com.lakehouse.ingestion.core.IngestionRunner
+
+  # Application JAR location
+  # For dev: local JAR path
+  # For prod: MinIO S3 path
+  mainApplicationFile: "s3a://spark-jars/lakehouse-ingestion.jar"
+
+  # Pipeline configuration file
+  # Can be overridden to point to different config
+  configFile: "/app/configs/cdc-postgres-to-delta.conf"
+
+  # Spark configuration
+  sparkConf:
+    # Logging
+    "spark.log.level": "INFO"
+
+    # Ivy cache (for dependency downloads)
+    "spark.jars.ivy": "/tmp/.ivy2"
+    "spark.driver.extraJavaOptions": "-Divy.cache.dir=/tmp/.ivy2 -Divy.home=/tmp/.ivy2"
+    "spark.executor.extraJavaOptions": "-Divy.cache.dir=/tmp/.ivy2 -Divy.home=/tmp/.ivy2"
+
+    # Delta Lake configuration
+    "spark.sql.extensions": "io.delta.sql.DeltaSparkSessionExtension"
+    "spark.sql.catalog.spark_catalog": "org.apache.spark.sql.delta.catalog.DeltaCatalog"
+
+    # Hive Metastore
+    "spark.sql.catalogImplementation": "hive"
+    "spark.hive.metastore.uris": "thrift://hive-metastore.hive-metastore.svc.cluster.local:9083"
+    "spark.sql.warehouse.dir": "s3a://lakehouse/warehouse"
+
+    # MinIO / S3A configuration
+    "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
+    "spark.hadoop.fs.s3a.endpoint": "http://minio.minio.svc.cluster.local:9000"
+    "spark.hadoop.fs.s3a.path.style.access": "true"
+    "spark.hadoop.fs.s3a.connection.ssl.enabled": "false"
+
+    # Performance tuning
+    "spark.sql.shuffle.partitions": "200"
+    "spark.sql.adaptive.enabled": "true"
+    "spark.sql.adaptive.coalescePartitions.enabled": "true"
+
+# Driver configuration
+driver:
+  # Resource limits
+  cores: 1
+  memory: "2g"
+
+  # Service account for RBAC
+  serviceAccount: spark-operator-spark
+
+  # Labels
+  labels:
+    version: "3.4.1"
+    app: lakehouse-ingestion
+    layer: bronze
+
+# Executor configuration
+executor:
+  # Number of executors
+  instances: 2
+
+  # Resource limits
+  cores: 1
+  memory: "2g"
+
+  # Labels
+  labels:
+    version: "3.4.1"
+    app: lakehouse-ingestion
+
+  # Security context (required for some k8s clusters)
+  securityContext:
+    capabilities:
+      drop:
+        - ALL
+    runAsGroup: 185
+    runAsUser: 185
+    runAsNonRoot: true
+    allowPrivilegeEscalation: false
+    seccompProfile:
+      type: RuntimeDefault
+
+# External Secrets (for MinIO/Kafka credentials)
+externalSecrets:
+  enabled: true
+
+  # Vault backend
+  secretStore:
+    name: vault-cluster-store
+    kind: ClusterSecretStore
+
+  # MinIO credentials (using spark-user-key from Vault)
+  minio:
+    accessKey: spark-user-key  # Username (hardcoded)
+    vaultPath: secret/minio/users
+    secretProperty: spark-user-key  # Vault property containing password
+
+# Monitoring
+monitoring:
+  # Expose Spark metrics to Prometheus
+  enabled: true
+  exposeDriverMetrics: true
+  exposeExecutorMetrics: true
+
+  # Prometheus JMX exporter
+  jmxExporter:
+    enabled: true
+    jar: "/app/jmx_prometheus_javaagent-0.11.0.jar"
+    port: 8090
+
+# ConfigMap for pipeline configuration
+config:
+  # Whether to create ConfigMap from configs/ directory
+  create: true
+
+  # Config file content (can be overridden)
+  # Leave empty to use file from configs/cdc-postgres-to-delta.conf
+  content: ""
+
+# Service configuration (for Spark UI)
+service:
+  type: ClusterIP
+  port: 4040
+
+# Ingress (Tailscale) for Spark UI
+ingress:
+  enabled: true
+  className: tailscale
+  hostname: lakehouse-ingestion-ui
+  port: 4040
+
+# Image configuration (for Spark driver/executor)
+image:
+  # Base Spark image with Delta Lake support
+  repository: apache/spark
+  tag: "3.4.1-scala2.12-java11-python3-ubuntu"
+  pullPolicy: IfNotPresent
+
+# Resource quotas
+resources: {}
+  # limits:
+  #   cpu: 4
+  #   memory: 8Gi
+  # requests:
+  #   cpu: 2
+  #   memory: 4Gi
+
+# Node selection
+nodeSelector: {}
+
+# Tolerations
+tolerations: []
+
+# Affinity
+affinity: {}
+
+# Restart policy
+restartPolicy:
+  type: OnFailure
+  onFailureRetries: 3
+  onFailureRetryInterval: 10
+  onSubmissionFailureRetries: 5
+  onSubmissionFailureRetryInterval: 20
