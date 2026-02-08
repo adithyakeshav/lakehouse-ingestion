@@ -25,6 +25,10 @@ executor:
   cores: 1
   memory: "1g"
 
+# Ingress - dev hostname
+ingress:
+  hostname: lakehouse-ingestion-ui-dev
+
 # Monitoring - less aggressive in dev
 monitoring:
   enabled: true
@@ -54,7 +58,7 @@ config:
         source = {
           type = "kafka"
           options = {
-            bootstrap.servers = "datalake-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
+            kafka.bootstrap.servers = "datalake-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
             subscribe = "postgres_cdc_dev_music_school_db"
             streaming = "true"
             startingOffsets = "earliest"  # Replay all data in dev
@@ -63,11 +67,12 @@ config:
             failOnDataLoss = "false"
             maxOffsetsPerTrigger = "1000"  # Smaller batches for dev
             minPartitions = "1"
+            triggerInterval = "30 seconds"
           }
         }
 
         target = {
-          table = "s3a://lakehouse/bronze/music_school/cdc/dev/"
+          table = "s3a://learn-spark/warehouse/bronze/music_school/cdc/dev/"
           lakehouse_format = "delta"
           catalog = "hive"
           layer = "bronze"

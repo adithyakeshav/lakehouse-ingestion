@@ -37,7 +37,7 @@ spark:
     # Hive Metastore
     "spark.sql.catalogImplementation": "hive"
     "spark.hive.metastore.uris": "thrift://hive-metastore.hive-metastore.svc.cluster.local:9083"
-    "spark.sql.warehouse.dir": "s3a://lakehouse/warehouse"
+    "spark.sql.warehouse.dir": "s3a://learn-spark/warehouse"
 
     # MinIO / S3A configuration
     "spark.hadoop.fs.s3a.impl": "org.apache.hadoop.fs.s3a.S3AFileSystem"
@@ -145,7 +145,7 @@ service:
 ingress:
   enabled: true
   className: tailscale
-  hostname: lakehouse-ingestion-ui
+  hostname: lakehouse-ingestion-ui-prod
   port: 4040
 
 # Image configuration (for Spark driver/executor)

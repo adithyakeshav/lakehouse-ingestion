@@ -2,6 +2,7 @@ package com.lakehouse.ingestion.lakehouse
 
 import com.lakehouse.ingestion.io.BaseWriter
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.streaming.Trigger
 import org.slf4j.LoggerFactory
 
 /**
@@ -58,10 +59,15 @@ final class DeltaLakeWriter(spark: SparkSession) extends BaseWriter {
         s"checkpoint='$checkpointLocation', partitions=${partitionColumns.mkString(",")}"
     )
 
+    val triggerInterval = options.getOrElse("triggerInterval", "30 seconds")
+
+    log.info(s"[DeltaLakeWriter] Trigger interval: $triggerInterval")
+
     var writer = df.writeStream
       .format("delta")
       .outputMode("append")
       .option("checkpointLocation", checkpointLocation)
+      .trigger(Trigger.ProcessingTime(triggerInterval))
 
     // Add partition columns if specified
     if (partitionColumns.nonEmpty) {

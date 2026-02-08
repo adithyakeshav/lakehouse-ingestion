@@ -133,10 +133,12 @@ final class IngestionJob(
 
     val baseOptions = Map("table" -> table.identifier)
     val writeOptions =
-      if (isStreaming)
-        baseOptions + ("checkpointLocation" ->
+      if (isStreaming) {
+        val opts = baseOptions + ("checkpointLocation" ->
           s"/tmp/checkpoints/${config.domain}/${config.dataset}/${config.target.layer}")
-      else baseOptions
+        // Pass triggerInterval from source options if configured
+        config.source.options.get("triggerInterval").fold(opts)(v => opts + ("triggerInterval" -> v))
+      } else baseOptions
 
     log.info(
       s"[IngestionJob] Writing to table='${table.identifier}', " +
