@@ -3,7 +3,7 @@ package com.lakehouse.ingestion.core
 import com.lakehouse.ingestion.catalog.{CatalogAdapter, NoopCatalogAdapter}
 import com.lakehouse.ingestion.config.{ConfigLoader, IngestionConfig, PipelineConfig}
 import com.lakehouse.ingestion.io.{BaseReader, BaseWriter, KafkaReader, S3ParquetWriter}
-import com.lakehouse.ingestion.lakehouse.IcebergAppendWriter
+import com.lakehouse.ingestion.lakehouse.{IcebergAppendWriter, DeltaLakeWriter}
 import com.lakehouse.ingestion.schema.{FileBasedSchemaRegistry, SchemaRegistry}
 import org.apache.spark.sql.SparkSession
 import org.slf4j.LoggerFactory
@@ -110,6 +110,7 @@ object IngestionRunner {
     config.target.lakehouseFormat.toLowerCase match {
       case "parquet" | "s3-parquet" => new S3ParquetWriter
       case "iceberg"                => new IcebergAppendWriter(spark)
+      case "delta" | "deltalake"    => new DeltaLakeWriter(spark)
       case other =>
         throw new IllegalArgumentException(s"Unsupported target.lakehouse_format: '$other'")
     }

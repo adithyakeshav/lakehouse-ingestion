@@ -23,14 +23,8 @@ final class IcebergAppendWriter(spark: SparkSession) extends BaseWriter {
       df: DataFrame,
       options: Map[String, String]
   ): Unit = {
-    val table = options.getOrElse(
-      "table",
-      {
-        val msg = "IcebergAppendWriter requires 'table' option."
-        log.error(msg)
-        throw new IllegalArgumentException(msg)
-      }
-    )
+    val table = options.getOrElse("table", missingTable())
+    ensureNamespaceExists(table)
 
     if (df.isStreaming) {
       val checkpointLocation = options.getOrElse(
@@ -55,6 +49,42 @@ final class IcebergAppendWriter(spark: SparkSession) extends BaseWriter {
       log.error(s"[IcebergAppendWriter] Batch append to table='$table'")
       df.writeTo(table).append()
     }
+  }
+
+  /**
+   * Parse the table identifier and create the corresponding Iceberg namespace
+   * if it does not already exist.
+   *
+   * Expected forms:
+   *  - catalog.namespace.table
+   *  - catalog.ns1.ns2.table
+   */
+  private def ensureNamespaceExists(tableIdent: String): Unit = {
+    val parts = tableIdent.split("\\.")
+    if (parts.length < 3) {
+      // Not enough parts to have both catalog and namespace; nothing to do.
+      log.error(
+        s"[IcebergAppendWriter] Table identifier '$tableIdent' does not contain a namespace; " +
+          s"expected 'catalog.namespace.table'. Skipping namespace check."
+      )
+      return
+    }
+
+    val catalog = parts.head
+    val nsParts = parts.slice(1, parts.length - 1)
+    val namespace = nsParts.mkString(".")
+    val fqNamespace = s"$catalog.$namespace"
+
+    log.error(s"[IcebergAppendWriter] Ensuring Iceberg namespace exists: '$fqNamespace'")
+
+    // Rely on Iceberg's SQL extensions to handle CREATE NAMESPACE.
+    spark.sql(s"CREATE NAMESPACE IF NOT EXISTS $fqNamespace")
+  }
+
+  private def missingTable(): String = {
+    val msg = "IcebergAppendWriter requires 'table' option."
+    log.error(msg)
+    throw new IllegalArgumentException(msg)
   }
 }
 

@@ -1,6 +1,8 @@
 package com.lakehouse.ingestion.config
 
 import com.typesafe.config.{Config, ConfigFactory}
+import com.lakehouse.ingestion.schema.FileBasedSchemaRegistry
+import org.slf4j.LoggerFactory
 
 import java.io.File
 import scala.collection.JavaConverters._
@@ -15,12 +17,32 @@ import scala.collection.JavaConverters._
  */
 object ConfigLoader {
 
-  def loadFromFile(path: String): PipelineConfig = {
+  private val log = LoggerFactory.getLogger(ConfigLoader.getClass)
+
+  /**
+   * Loads configuration from file with optional validation.
+   *
+   * @param path Path to config file
+   * @param validateSchemas Whether to validate schema references exist (default: true)
+   * @param schemaBasePath Base path for schema registry (default: "schemas")
+   */
+  def loadFromFile(
+    path: String,
+    validateSchemas: Boolean = true,
+    schemaBasePath: String = "schemas"
+  ): PipelineConfig = {
     val config = ConfigFactory.parseFile(new File(path)).resolve()
-    load(config)
+    load(config, validateSchemas, schemaBasePath)
   }
 
-  def load(config: Config): PipelineConfig = {
+  /**
+   * Loads configuration from Typesafe Config object.
+   */
+  def load(
+    config: Config,
+    validateSchemas: Boolean = true,
+    schemaBasePath: String = "schemas"
+  ): PipelineConfig = {
     val env  = if (config.hasPath("env")) config.getString("env") else "dev"
     val jobs =
       if (config.hasPath("jobs"))
@@ -28,7 +50,53 @@ object ConfigLoader {
       else
         Seq.empty[IngestionConfig]
 
-    PipelineConfig(env = env, jobs = jobs)
+    val pipelineConfig = PipelineConfig(env = env, jobs = jobs)
+
+    // Validate schema references if requested
+    if (validateSchemas) {
+      log.info(s"Validating schema references for ${jobs.size} jobs")
+      validatePipelineConfig(pipelineConfig, schemaBasePath)
+    }
+
+    pipelineConfig
+  }
+
+  /**
+   * Validates that all schema references in the pipeline config exist.
+   *
+   * @throws ConfigValidationException if validation fails
+   */
+  private def validatePipelineConfig(config: PipelineConfig, schemaBasePath: String): Unit = {
+    val schemaRegistry = new FileBasedSchemaRegistry(schemaBasePath)
+
+    config.jobs.foreach { job =>
+      try {
+        // Attempt to load schema
+        val schema = schemaRegistry.getSchema(
+          job.schema.domain,
+          job.schema.dataset,
+          job.schema.version
+        )
+
+        log.info(
+          s"✓ Schema validated for ${job.domain}.${job.dataset}: " +
+          s"${job.schema.domain}/${job.schema.dataset}/${job.schema.version.getOrElse("latest")} " +
+          s"(${schema.fields.length} fields)"
+        )
+
+      } catch {
+        case e: Exception =>
+          val versionStr = job.schema.version.getOrElse("latest")
+          throw new ConfigValidationException(
+            s"Invalid schema reference in job ${job.domain}.${job.dataset}: " +
+            s"Schema '${job.schema.domain}/${job.schema.dataset}/$versionStr' not found. " +
+            s"Please create the schema file at '$schemaBasePath/${job.schema.domain}/${job.schema.dataset}/$versionStr.json'",
+            cause = e
+          )
+      }
+    }
+
+    log.info(s"All schema references validated successfully")
   }
 
   private def parseIngestionConfig(c: Config): IngestionConfig = {
@@ -94,3 +162,9 @@ object ConfigLoader {
     )
   }
 }
+
+/**
+ * Exception thrown when configuration validation fails.
+ */
+class ConfigValidationException(message: String, cause: Throwable = null)
+  extends RuntimeException(message, cause)

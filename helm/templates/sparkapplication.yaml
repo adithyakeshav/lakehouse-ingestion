@@ -26,6 +26,12 @@ spec:
 
   sparkVersion: {{ .Values.spark.version | quote }}
 
+  # Volume for pipeline config
+  volumes:
+    - name: pipeline-config
+      configMap:
+        name: {{ include "lakehouse-ingestion.fullname" . }}-config
+
   # Driver configuration
   driver:
     envFrom:
@@ -38,6 +44,9 @@ spec:
     cores: {{ .Values.driver.cores }}
     memory: {{ .Values.driver.memory | quote }}
     serviceAccount: {{ .Values.driver.serviceAccount }}
+    volumeMounts:
+      - name: pipeline-config
+        mountPath: /app/configs
 
   # Executor configuration
   executor:
