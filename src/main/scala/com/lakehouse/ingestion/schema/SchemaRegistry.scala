@@ -57,14 +57,15 @@ final class FileBasedSchemaRegistry(basePath: String = "schemas") extends Schema
 
   // Try to detect if we're running from JAR or filesystem
   private val useClasspath: Boolean = {
-    val resource = getClass.getClassLoader.getResource(basePath)
-    val exists = resource != null
-    if (exists) {
-      log.info(s"Schema registry will load from classpath (JAR resources)")
-    } else {
+    // Check for directory on filesystem first; if not present, assume classpath (JAR)
+    val dir = new File(basePath)
+    val isFilesystem = dir.exists() && dir.isDirectory
+    if (isFilesystem) {
       log.info(s"Schema registry will load from filesystem: $basePath")
+    } else {
+      log.info(s"Schema registry will load from classpath (JAR resources)")
     }
-    exists
+    !isFilesystem
   }
 
   override def getSchema(
