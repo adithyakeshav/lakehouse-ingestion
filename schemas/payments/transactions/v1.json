@@ -1,0 +1,106 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "transaction_id",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Unique transaction identifier",
+        "pii": false
+      }
+    },
+    {
+      "name": "customer_id",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "Customer identifier",
+        "pii": true
+      }
+    },
+    {
+      "name": "amount",
+      "type": {
+        "type": "decimal",
+        "precision": 10,
+        "scale": 2
+      },
+      "nullable": false,
+      "metadata": {
+        "description": "Transaction amount in USD",
+        "pii": false,
+        "min_value": 0.01,
+        "max_value": 999999.99
+      }
+    },
+    {
+      "name": "currency",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Currency code (ISO 4217)",
+        "pii": false,
+        "allowed_values": ["USD", "EUR", "GBP", "JPY"]
+      }
+    },
+    {
+      "name": "transaction_status",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Current status of the transaction",
+        "pii": false,
+        "allowed_values": ["pending", "completed", "failed", "cancelled"]
+      }
+    },
+    {
+      "name": "transaction_time",
+      "type": "timestamp",
+      "nullable": false,
+      "metadata": {
+        "description": "Timestamp when transaction occurred",
+        "pii": false
+      }
+    },
+    {
+      "name": "merchant_id",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "Merchant identifier",
+        "pii": false
+      }
+    },
+    {
+      "name": "payment_method",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "Payment method used",
+        "pii": false,
+        "allowed_values": ["credit_card", "debit_card", "bank_transfer", "wallet"]
+      }
+    },
+    {
+      "name": "_ingestion_time",
+      "type": "timestamp",
+      "nullable": false,
+      "metadata": {
+        "description": "When this record was ingested into the lakehouse",
+        "pii": false,
+        "system_column": true
+      }
+    },
+    {
+      "name": "_source_system",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Source system that produced this record",
+        "pii": false,
+        "system_column": true
+      }
+    }
+  ]
+}

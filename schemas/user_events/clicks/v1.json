@@ -1,0 +1,117 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "event_id",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Unique event identifier",
+        "pii": false
+      }
+    },
+    {
+      "name": "user_id",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "User identifier (null for anonymous users)",
+        "pii": true
+      }
+    },
+    {
+      "name": "session_id",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Session identifier",
+        "pii": false
+      }
+    },
+    {
+      "name": "event_time",
+      "type": "timestamp",
+      "nullable": false,
+      "metadata": {
+        "description": "When the click event occurred",
+        "pii": false
+      }
+    },
+    {
+      "name": "page_url",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "URL of the page where click occurred",
+        "pii": false
+      }
+    },
+    {
+      "name": "element_id",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "HTML element ID that was clicked",
+        "pii": false
+      }
+    },
+    {
+      "name": "element_class",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "HTML element class that was clicked",
+        "pii": false
+      }
+    },
+    {
+      "name": "device_type",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "Type of device used",
+        "pii": false,
+        "allowed_values": ["desktop", "mobile", "tablet"]
+      }
+    },
+    {
+      "name": "browser",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "Browser name",
+        "pii": false
+      }
+    },
+    {
+      "name": "ip_address",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "IP address of the user",
+        "pii": true,
+        "retention_days": 90
+      }
+    },
+    {
+      "name": "_ingestion_time",
+      "type": "timestamp",
+      "nullable": false,
+      "metadata": {
+        "description": "When this record was ingested",
+        "pii": false,
+        "system_column": true
+      }
+    },
+    {
+      "name": "_source_system",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "Source system identifier",
+        "pii": false,
+        "system_column": true
+      }
+    }
+  ]
+}

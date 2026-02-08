@@ -1,0 +1,194 @@
+{
+  "type": "struct",
+  "fields": [
+    {
+      "name": "op",
+      "type": "string",
+      "nullable": false,
+      "metadata": {
+        "description": "CDC operation type: c (create), u (update), d (delete), r (read/snapshot)",
+        "pii": false,
+        "allowed_values": ["c", "u", "d", "r"]
+      }
+    },
+    {
+      "name": "ts_ms",
+      "type": "long",
+      "nullable": false,
+      "metadata": {
+        "description": "Timestamp in milliseconds when the change occurred in the source database",
+        "pii": false
+      }
+    },
+    {
+      "name": "before",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "JSON string of row state before the change (null for inserts)",
+        "pii": true,
+        "note": "Parse as JSON for actual column values"
+      }
+    },
+    {
+      "name": "after",
+      "type": "string",
+      "nullable": true,
+      "metadata": {
+        "description": "JSON string of row state after the change (null for deletes)",
+        "pii": true,
+        "note": "Parse as JSON for actual column values"
+      }
+    },
+    {
+      "name": "source",
+      "type": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "version",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Debezium connector version"}
+          },
+          {
+            "name": "connector",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Connector name"}
+          },
+          {
+            "name": "name",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Logical server name"}
+          },
+          {
+            "name": "ts_ms",
+            "type": "long",
+            "nullable": true,
+            "metadata": {"description": "Timestamp when event was processed by connector"}
+          },
+          {
+            "name": "snapshot",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Snapshot indicator: true/false/last"}
+          },
+          {
+            "name": "db",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Database name"}
+          },
+          {
+            "name": "schema",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Schema name"}
+          },
+          {
+            "name": "table",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Table name"}
+          },
+          {
+            "name": "txId",
+            "type": "long",
+            "nullable": true,
+            "metadata": {"description": "Transaction ID"}
+          },
+          {
+            "name": "lsn",
+            "type": "long",
+            "nullable": true,
+            "metadata": {"description": "Log sequence number"}
+          },
+          {
+            "name": "xmin",
+            "type": "long",
+            "nullable": true,
+            "metadata": {"description": "PostgreSQL transaction ID"}
+          }
+        ]
+      },
+      "nullable": false,
+      "metadata": {
+        "description": "Source metadata from Debezium connector",
+        "pii": false
+      }
+    },
+    {
+      "name": "transaction",
+      "type": {
+        "type": "struct",
+        "fields": [
+          {
+            "name": "id",
+            "type": "string",
+            "nullable": true,
+            "metadata": {"description": "Transaction identifier"}
+          },
+          {
+            "name": "total_order",
+            "type": "long",
+            "nullable": true,
+            "metadata": {"description": "Order of event within transaction"}
+          },
+          {
+            "name": "data_collection_order",
+            "type": "long",
+            "nullable": true,
+            "metadata": {"description": "Order within data collection"}
+          }
+        ]
+      },
+      "nullable": true,
+      "metadata": {
+        "description": "Transaction metadata",
+        "pii": false
+      }
+    },
+    {
+      "name": "_ingestion_time",
+      "type": "timestamp",
+      "nullable": false,
+      "metadata": {
+        "description": "When this CDC event was ingested into the lakehouse",
+        "pii": false,
+        "system_column": true
+      }
+    },
+    {
+      "name": "_kafka_partition",
+      "type": "integer",
+      "nullable": true,
+      "metadata": {
+        "description": "Kafka partition this message came from",
+        "pii": false,
+        "system_column": true
+      }
+    },
+    {
+      "name": "_kafka_offset",
+      "type": "long",
+      "nullable": true,
+      "metadata": {
+        "description": "Kafka offset of this message",
+        "pii": false,
+        "system_column": true
+      }
+    },
+    {
+      "name": "_kafka_timestamp",
+      "type": "timestamp",
+      "nullable": true,
+      "metadata": {
+        "description": "Kafka message timestamp",
+        "pii": false,
+        "system_column": true
+      }
+    }
+  ]
+}
