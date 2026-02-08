@@ -5,8 +5,8 @@ environment: dev
 
 # Spark configuration - dev settings
 spark:
-  # Use local JAR for faster dev iteration
-  mainApplicationFile: "local:///app/lakehouse-ingestion.jar"
+  # JAR from MinIO (uploaded via CI/CD or `make upload`)
+  mainApplicationFile: "s3a://spark-jars/lakehouse-ingestion.jar"
 
   sparkConf:
     # More verbose logging for dev
@@ -55,10 +55,10 @@ config:
           type = "kafka"
           options = {
             bootstrap.servers = "datalake-kafka-cluster-kafka-bootstrap.kafka.svc.cluster.local:9092"
-            subscribe = "postgres_cdc_music_school_db"
+            subscribe = "postgres_cdc_dev_music_school_db"
             streaming = "true"
             startingOffsets = "earliest"  # Replay all data in dev
-            group.id = "lakehouse-ingestion-cdc-music-school-dev"
+            group.id = "lakehouse-ingestion-cdc-dev-music-school"
             kafka.security.protocol = "PLAINTEXT"
             failOnDataLoss = "false"
             maxOffsetsPerTrigger = "1000"  # Smaller batches for dev
